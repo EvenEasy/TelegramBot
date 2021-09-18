@@ -45,7 +45,7 @@ async def info(msg : types.Message):
 /schedulethu - розклад Пар на Четвер
 /schedulefri - розклад Пар на П'ятницю
 
-Інші команди доступні тільки для Старости та Заступ. Старости)))
+Інші команди доступні тільки для Старости)))
 """)
 
 @dp.message_handler(commands=['SetInfo'])
