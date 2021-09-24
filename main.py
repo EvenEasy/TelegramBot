@@ -4,12 +4,14 @@ import config
 import json
 import requests
 import pyowm
+import wikipedia
 
 from bs4 import BeautifulSoup as BS
 from aiogram import Bot, Dispatcher, executor, types
 
 logging.basicConfig(level=logging.INFO)
 
+wikipedia.set_lang("uk")
 owm = pyowm.OWM(config.wApiKey)
 w = owm.weather_manager().weather_at_place("Дубно")
 myWeather = w.weather
@@ -34,11 +36,24 @@ def get_news():
         #desc = article.find("span").text.strip()
         return title
 
+@dp.message_handler(commands=["wiki", "wikipedia"])
+async def wiki(title = types.Message):
+    try:
+        search = wikipedia.search(title.get_args(), results=1)
+        result = wikipedia.page(search)
+        await title.answer(f"{result.title}\n_______________\n{wikipedia.summary(search, sentences=10)}\n_______________\n{result.url}")
+    except wikipedia.exceptions.WikipediaException:
+        await title.answer("Введіть аргумент пошуку\nнаприклад    :     /wiki [запрос]")
+    except Exception as a:
+        await title.answer(f"Помилка : {a}")
+
 @dp.message_handler(commands=['help'])
 async def info(msg : types.Message):
     await msg.answer("""Вот список доптупних Команд для усіх : 
 /temp - Температура в м.Дубно
 /news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
+/wiki - пошук інформації у Wikipedia
+_____________________________________
 /schedulemon- розклад Пар на Понеділок
 /scheduletue - розклад Пар на Вівторок
 /schedulewed - розклад Пар на Середу
@@ -50,18 +65,20 @@ async def info(msg : types.Message):
 
 @dp.message_handler(commands=['SetInfo'])
 async def SetInfo(args : types.Message):
-    a = args.get_args().split(",")
-    if len(a) != 6:
-        await args.answer("Потрібно 6 аргументів")
+    a = args.get_args().split("\n")
+    if len(a) != 8:
+        await args.answer("Потрібно 8 аргументів")
         return
     surname = a[0]
     KeyInfo = {
-        "surname" : "surname",
-        "full name" : "name",
-        "age" : 15,
-        "status" : None,
-        "num in list" : 1,
-        "phone" : "немає",
+        "Призвіще" : "surname",
+        "П.І.Б." : "name",
+        "років" : 15,
+        "День народженя" : "1.1.2016",
+        "відповідає за" : None,
+        "проживає в": "Дубно",
+        "номер в списку" : 1,
+        "номер телефону" : None
     }
     arr = list(KeyInfo.keys())
     for i in range(len(arr)):
@@ -75,7 +92,7 @@ async def SetInfo(args : types.Message):
 async def Getinfo(args : types.Message):
     answer = ""
     try:
-        answer += f"___{data['StudentsInfo'][args.get_args()]['surname']}___\n"
+        answer += f"___{data['StudentsInfo'][args.get_args()]['Призвіще']}___\n"
         for key, value in data["StudentsInfo"][args.get_args()].items():
             answer += f"{key} - {value}\n"
     except KeyError:
