@@ -5,6 +5,7 @@ import json
 import requests
 import pyowm
 import wikipedia
+import gspread
 
 from bs4 import BeautifulSoup as BS
 from aiogram import Bot, Dispatcher, executor, types
@@ -12,6 +13,11 @@ from aiogram import Bot, Dispatcher, executor, types
 logging.basicConfig(level=logging.INFO)
 
 wikipedia.set_lang("uk")
+gc = gspread.service_account(filename="credentials.json")
+sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
+data1 = sh.sheet1
+access = [1835953916, 1009661353]
+
 owm = pyowm.OWM(config.wApiKey)
 w = owm.weather_manager().weather_at_place("Дубно")
 myWeather = w.weather
@@ -53,7 +59,7 @@ async def info(msg : types.Message):
 /temp - Температура в м.Дубно
 /news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
 /wiki - пошук інформації у Wikipedia
-_____________________________________
+_________________________________
 /schedulemon- розклад Пар на Понеділок
 /scheduletue - розклад Пар на Вівторок
 /schedulewed - розклад Пар на Середу
@@ -65,57 +71,59 @@ _____________________________________
 
 @dp.message_handler(commands=['SetInfo'])
 async def SetInfo(args : types.Message):
-    a = args.get_args().split("\n")
-    if len(a) != 8:
-        await args.answer("Потрібно 8 аргументів")
+    if args.from_user.id not in access:
+        await args.answer("У вас немає доступу до Команди")
         return
-    surname = a[0]
-    KeyInfo = {
-        "Призвіще" : "surname",
-        "П.І.Б." : "name",
-        "років" : 15,
-        "День народженя" : "1.1.2016",
-        "відповідає за" : None,
-        "проживає в": "Дубно",
-        "номер в списку" : 1,
-        "номер телефону" : None
-    }
-    arr = list(KeyInfo.keys())
-    for i in range(len(arr)):
-        KeyInfo[arr[i]] = a[i]
 
-    data["StudentsInfo"][surname] = KeyInfo
-    with open("data.json", "w", encoding="utf8") as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
+    a = args.get_args().split("\n")
+    if len(a) != 9:
+        await args.answer("Потрібно 9 аргументів")
+        return
+    if a[0] in data1.col_values(1):
+        ind = data1.col_values(1).index(a[0]) + 1
+        data1.update(f"A{ind}:I{ind}", [a])
+        return
+    data1.append_row(a)
 
 @dp.message_handler(commands=['GetInfo'])
 async def Getinfo(args : types.Message):
+    if args.from_user.id not in access:
+        await args.answer("У вас немає доступу до Команди")
+        return
+    arr = data1.col_values(1)
+    a = data1.get_all_records()
+    if args.get_args() not in arr:
+        await args.answer("Призвіще не Знайдено")
+        return
+    d = a[arr.index(args.get_args()) - 1]
     answer = ""
-    try:
-        answer += f"___{data['StudentsInfo'][args.get_args()]['Призвіще']}___\n"
-        for key, value in data["StudentsInfo"][args.get_args()].items():
-            answer += f"{key} - {value}\n"
-    except KeyError:
-        answer = "Ім'я не знайдено"
+    for key, value in d.items():
+        answer += f"{key} - {value}\n"
     await args.answer(answer)
 
 @dp.message_handler(commands=['GetAllInfo'])
 async def GetAllInfo(args : types.Message):
-    for st in list(data["StudentsInfo"].keys()):
-        answer = f"___{data['StudentsInfo'][st]['surname']}___\n"
-        for key, value in data['StudentsInfo'][st].items():
+    if args.from_user.id not in access:
+        await args.answer("У вас немає доступу до Команди")
+        return
+    ls = data1.get_all_records()
+    for i in ls:
+        answer = ""
+        for key, value in i.items():
             answer += f"{key} - {value}\n"
         await args.answer(answer)
         answer = ""
 
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
 async def Schedule(msgs : types.Message):
-    msg = msgs.text.split('S')[0]
-    arg = msg[-4:-1]
-    try:
-        await msgs.answer('\n'.join(data['Days'][arg].keys()))
-    except KeyError:
-        await msgs.answer("day not found !")
+    msg = msgs.text.split('@')[0]
+    arg = msg[-3] + msg[-2] + msg[-1]
+    answer = f"______|{arg.upper()}|______\n"
+    lst = list(data["Days"][arg].keys())
+    for i in range(len(lst)):
+        answer += f"{i + 1} - {lst[i]}\n"
+    answer += "_________________"
+    await msgs.answer(answer)
 
 @dp.message_handler(commands=["news"])
 async def news(message : types.Message):
