@@ -16,7 +16,7 @@ wikipedia.set_lang("uk")
 gc = gspread.service_account(filename="credentials.json")
 sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
 data1 = sh.sheet1
-access = [1835953916, 1009661353]
+access_с = [1835953916, 1009661353]
 
 owm = pyowm.OWM(config.wApiKey)
 w = owm.weather_manager().weather_at_place("Дубно")
@@ -34,24 +34,26 @@ def get_news():
     }
     url = "https://dubnopk.com.ua/index.php/news/"
     r = requests.get(url=url, headers=headers)
-
-    soup = BS(r.text, "lxml")
-    news = soup.find_all("div", class_="art-box-body")
-    for article in news:
-        title = article.find("span", class_="art-postheadericon").text.strip()
-        #desc = article.find("span").text.strip()
-        return title
+    try:
+        soup = BS(r.text, "lxml")
+        news = soup.find_all("div", class_="art-box-body")
+        for article in news:
+            title = article.find("span", class_="art-postheadericon").text.strip()
+            #desc = article.find("span").text.strip()
+            return title
+    except Exception as E:
+        return f"[ ! ] помилка - {E}"
 
 @dp.message_handler(commands=["wiki", "wikipedia"])
 async def wiki(title = types.Message):
     try:
         search = wikipedia.search(title.get_args(), results=1)
         result = wikipedia.page(search)
-        await title.answer(f"{result.title}\n_______________\n{wikipedia.summary(search, sentences=10)}\n_______________\n{result.url}")
+        await title.answer(f"{result.title}\n_______________\n{wikipedia.summary(search, sentences=9)}\n_______________\n{result.url}")
     except wikipedia.exceptions.WikipediaException:
         await title.answer("Введіть аргумент пошуку\nнаприклад    :     /wiki [запрос]")
     except Exception as a:
-        await title.answer(f"Помилка : {a}")
+        await title.answer(f"[ ! ] помилка : {a}")
 
 @dp.message_handler(commands=['help'])
 async def info(msg : types.Message):
@@ -71,7 +73,7 @@ _________________________________
 
 @dp.message_handler(commands=['SetInfo'])
 async def SetInfo(args : types.Message):
-    if args.from_user.id not in access:
+    if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
 
@@ -87,9 +89,10 @@ async def SetInfo(args : types.Message):
 
 @dp.message_handler(commands=['GetInfo'])
 async def Getinfo(args : types.Message):
-    if args.from_user.id not in access:
+    if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
+
     arr = data1.col_values(1)
     a = data1.get_all_records()
     if args.get_args() not in arr:
@@ -103,16 +106,16 @@ async def Getinfo(args : types.Message):
 
 @dp.message_handler(commands=['GetAllInfo'])
 async def GetAllInfo(args : types.Message):
-    if args.from_user.id not in access:
+    if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
+
     ls = data1.get_all_records()
     for i in ls:
         answer = ""
         for key, value in i.items():
             answer += f"{key} - {value}\n"
         await args.answer(answer)
-        answer = ""
 
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
 async def Schedule(msgs : types.Message):
