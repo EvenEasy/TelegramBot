@@ -116,7 +116,7 @@ async def GetAllInfo(args : types.Message):
 
 @dp.message_handler(commands=['search'])
 async def Google_Shearch(args : types.Message):
-    for i in search(args.get_args(), tld="co.in", num=10, stop=10, pause=2):
+    for i in search(args.get_args(), land='uk'):
          await args.answer(i)
     
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
