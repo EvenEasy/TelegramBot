@@ -117,7 +117,7 @@ async def GetAllInfo(args : types.Message):
 @dp.message_handler(commands=['search'])
 async def Google_Shearch(args : types.Message):
     #for i in search(args.get_args(), land='uk'):
-    await args.answer("[ ! ] Ця команда в розробці")
+    await args.answer("[ ! ] ця команда поки що не доступна")
     
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
 async def Schedule(msgs : types.Message):
