@@ -48,7 +48,7 @@ async def wiki(title = types.Message):
         result = wikipedia.page(search)
         await title.answer(f"{result.title}\n_______________\n{wikipedia.summary(search, sentences=9)}\n_______________\n{result.url}")
     except wikipedia.exceptions.WikipediaException:
-        await title.answer("Введіть аргумент пошуку\nнаприклад    :     /wiki [запрос]")
+        await title.answer("Введіть аргумент пошуку\nнаприклад : /wiki [запрос]")
     except Exception as a:
         await title.answer(f"[ ! ] помилка : {a}")
 
@@ -58,13 +58,13 @@ async def info(msg : types.Message):
 /temp - Температура в м.Дубно
 /news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
 /wiki - пошук інформації у Wikipedia
+/search - пошук інформації в GOOGLE
 _________________________________
 /schedulemon- розклад Пар на Понеділок
 /scheduletue - розклад Пар на Вівторок
 /schedulewed - розклад Пар на Середу
 /schedulethu - розклад Пар на Четвер
 /schedulefri - розклад Пар на П'ятницю
-
 Інші команди доступні тільки для Старости)))
 """)
 
@@ -116,8 +116,14 @@ async def GetAllInfo(args : types.Message):
 
 @dp.message_handler(commands=['search'])
 async def Google_Shearch(args : types.Message):
-    #for i in search(args.get_args(), land='uk'):
-    await args.answer("[ ! ] ця команда поки що не доступна")
+    if args.get_args() == "":
+        await args.answer("Введіть аргумент пошуку\nнаприклад : /search [запрос]")
+        return
+    try:
+        for url in search(args.get_args(), lang='uk', num_results=5):
+            await args.answer(url)
+    except Exception as E:
+        await args.answer(f"[ ! ] помилка - {E}")
     
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
 async def Schedule(msgs : types.Message):
@@ -136,12 +142,19 @@ async def news(message : types.Message):
 
 @dp.message_handler(commands=["temp"])
 async def weather(message : types.Message):
-    owm = pyowm.OWM(config.wApiKey)
-    w = owm.weather_manager().weather_at_place("Дубно")
-    myWeather = w.weather
-    temp = myWeather.temperature('celsius')["temp"]
+    city = "Дубно"
+    if len(message.get_args()) >= 2:
+        city = message.get_args()
+    try:
+        owm = pyowm.OWM(config.wApiKey)
+        w = owm.weather_manager().weather_at_place(city)
+        myWeather = w.weather
+        temp = myWeather.temperature('celsius')["temp"]
+    except Exception as E:
+        await message.answer(f"[ ! ] помилка - {E}")
+        return
 
-    await message.answer(f"Температура в м.Дубно - {str(temp)}°")
+    await message.answer(f"Температура в м.{city} - {str(temp)}°")
     if temp < 10:
         await message.answer("Бажано одягати куртку і штани)))")
 
