@@ -55,7 +55,7 @@ async def wiki(title = types.Message):
 @dp.message_handler(commands=['help'])
 async def info(msg : types.Message):
     await msg.answer("""Вот список доптупних Команд для усіх : 
-/temp - Температура в м.Дубно
+/temp - Температура в м.Дубно(та не тільки)
 /news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
 /wiki - пошук інформації у Wikipedia
 /search - пошук інформації в GOOGLE
