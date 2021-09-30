@@ -7,6 +7,7 @@ import pyowm
 import wikipedia
 import gspread
 
+from googlesearch import search
 from bs4 import BeautifulSoup as BS
 from aiogram import Bot, Dispatcher, executor, types
 
@@ -18,10 +19,6 @@ sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
 data1 = sh.sheet1
 access_с = [1835953916, 1009661353]
 
-owm = pyowm.OWM(config.wApiKey)
-w = owm.weather_manager().weather_at_place("Дубно")
-myWeather = w.weather
-temp = myWeather.temperature('celsius')["temp"]
 bot = Bot(token=config.TOKEN)
 dp = Dispatcher(bot)
 
@@ -117,6 +114,11 @@ async def GetAllInfo(args : types.Message):
             answer += f"{key} - {value}\n"
         await args.answer(answer)
 
+@dp.message_handler(commands=['search'])
+async def Google_Shearch(args : types.Message):
+    for i in search(args.get_args(), tld="co.in", num=10, stop=10, pause=2):
+         await args.answer(i)
+    
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
 async def Schedule(msgs : types.Message):
     msg = msgs.text.split('@')[0]
@@ -134,6 +136,11 @@ async def news(message : types.Message):
 
 @dp.message_handler(commands=["temp"])
 async def weather(message : types.Message):
+    owm = pyowm.OWM(config.wApiKey)
+    w = owm.weather_manager().weather_at_place("Дубно")
+    myWeather = w.weather
+    temp = myWeather.temperature('celsius')["temp"]
+
     await message.answer(f"Температура в м.Дубно - {str(temp)}°")
     if temp < 10:
         await message.answer("Бажано одягати куртку і штани)))")
