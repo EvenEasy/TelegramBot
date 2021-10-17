@@ -7,7 +7,7 @@ import pyowm
 import wikipedia
 import gspread
 
-from gsearch.googlesearch import search
+from googlesearch import search
 from bs4 import BeautifulSoup as BS
 from aiogram import Bot, Dispatcher, executor, types
 
@@ -120,10 +120,8 @@ async def Google_Shearch(args : types.Message):
         await args.answer("Введіть аргумент пошуку\nнаприклад : /search [запрос]")
         return
     try:
-        answer = ""
         for url in search(args.get_args(), lang='uk', num_results=5):
-            answer += url + '\n\n'
-        await args.answer(answer)
+            await args.answer(url)
     except Exception as E:
         await args.answer(f"[ ! ] помилка - {E}")
     
