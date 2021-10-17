@@ -7,7 +7,7 @@ import pyowm
 import wikipedia
 import gspread
 
-from googlesearch import search
+from gsearch.googlesearch import search
 from bs4 import BeautifulSoup as BS
 from aiogram import Bot, Dispatcher, executor, types
 
@@ -114,14 +114,16 @@ async def GetAllInfo(args : types.Message):
             answer += f"{key} - {value}\n"
         await args.answer(answer)
 
-@dp.message_handler(commands=['search'])
+@dp.message_handler(commands=['search', 's'])
 async def Google_Shearch(args : types.Message):
     if args.get_args() == "":
         await args.answer("Введіть аргумент пошуку\nнаприклад : /search [запрос]")
         return
     try:
+        answer = ""
         for url in search(args.get_args(), lang='uk', num_results=5):
-            await args.answer(url)
+            answer += url + '\n\n'
+        await args.answer(answer)
     except Exception as E:
         await args.answer(f"[ ! ] помилка - {E}")
     
