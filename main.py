@@ -11,19 +11,33 @@ from googlesearch import search
 from bs4 import BeautifulSoup as BS
 from aiogram import Bot, Dispatcher, executor, types
 
-logging.basicConfig(level=logging.INFO)
+try:
+    logging.basicConfig(level=logging.INFO)
 
-wikipedia.set_lang("uk")
-gc = gspread.service_account(filename="credentials.json")
-sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
-data1 = sh.sheet1
-access_с = [1835953916, 1009661353]
+    wikipedia.set_lang("uk")
+    gc = gspread.service_account(filename="credentials.json")
+    sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
+    data1 = sh.sheet1
+    access_с = [1835953916, 1009661353]
 
-bot = Bot(token=config.TOKEN)
-dp = Dispatcher(bot)
+    bot = Bot(token=config.TOKEN)
+    dp = Dispatcher(bot)
+    def read():
+        with open("data.json", "r", encoding='utf8') as file:
+            return json.load(file)
+    def write(dict1):
+        with open("data.json", "w", encoding='utf8') as file:
+            return json.dump(dict1, file, indent=4, ensure_ascii=False)
+    def Uinfo(msg : types.Message):
+        d = read()
+        n = 1
+        if str(msg.from_user.id) in d["User_Input_Info"].keys(): n = d["User_Input_Info"][str(msg.from_user.id)][0] + 1
+        d["User_Input_Info"][str(msg.from_user.id)] = [n,msg.text, msg.from_user.full_name]
+        write(d)
+        del d, n
 
-with open("data.json", "r", encoding='utf8') as file:
-    data = json.load(file)
+except Exception as E:
+    print(f"[Error] {E}")
 
 def get_news():
     headers = {
@@ -43,6 +57,7 @@ def get_news():
 
 @dp.message_handler(commands=["wiki", "wikipedia"])
 async def wiki(title = types.Message):
+    Uinfo(title)
     try:
         search = wikipedia.search(title.get_args(), results=1)
         result = wikipedia.page(search)
@@ -51,9 +66,12 @@ async def wiki(title = types.Message):
         await title.answer("Введіть аргумент пошуку\nнаприклад : /wiki [запрос]")
     except Exception as a:
         await title.answer(f"[ ! ] помилка : {a}")
+        del a
+    del search, result
 
 @dp.message_handler(commands=['help'])
 async def info(msg : types.Message):
+    Uinfo(msg)
     await msg.answer("""Вот список доптупних Команд для усіх : 
 /temp - Температура в м.Дубно(та не тільки)
 /news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
@@ -70,6 +88,7 @@ _________________________________
 
 @dp.message_handler(commands=['SetInfo'])
 async def SetInfo(args : types.Message):
+    Uinfo(args)
     if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
@@ -81,6 +100,7 @@ async def SetInfo(args : types.Message):
     if a[0] in data1.col_values(1):
         ind = data1.col_values(1).index(a[0]) + 1
         data1.update(f"A{ind}:I{ind}", [a])
+        del ind
         return
     data1.append_row(a)
 
@@ -100,9 +120,11 @@ async def Getinfo(args : types.Message):
     for key, value in d.items():
         answer += f"{key} - {value}\n"
     await args.answer(answer)
+    Uinfo(args)
 
 @dp.message_handler(commands=['GetAllInfo'])
 async def GetAllInfo(args : types.Message):
+    Uinfo(args)
     if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
@@ -113,9 +135,11 @@ async def GetAllInfo(args : types.Message):
         for key, value in i.items():
             answer += f"{key} - {value}\n"
         await args.answer(answer)
+        del answer
 
 @dp.message_handler(commands=['search', 's'])
 async def Google_Shearch(args : types.Message):
+    Uinfo(args)
     if args.get_args() == "":
         await args.answer("Введіть аргумент пошуку\nнаприклад : /search [запрос]")
         return
@@ -130,15 +154,18 @@ async def Schedule(msgs : types.Message):
     msg = msgs.text.split('@')[0]
     arg = msg[-3] + msg[-2] + msg[-1]
     answer = f"______|{arg.upper()}|______\n"
-    lst = list(data["Days"][arg].keys())
+    lst = list(read()["Days"][arg].keys())
     for i in range(len(lst)):
         answer += f"{i + 1} - {lst[i]}\n"
     answer += "_________________"
     await msgs.answer(answer)
+    Uinfo(msgs)
+    del msg, arg, answer, lst
 
 @dp.message_handler(commands=["news"])
 async def news(message : types.Message):
     await message.answer(f"НОВИНИ  :\n{get_news()}\n - https://dubnopk.com.ua/index.php/news")
+    Uinfo(message)
 
 @dp.message_handler(commands=["temp"])
 async def weather(message : types.Message):
@@ -157,14 +184,18 @@ async def weather(message : types.Message):
     await message.answer(f"Температура в м.{city} - {str(temp)}°")
     if temp < 10:
         await message.answer("Бажано одягати куртку і штани)))")
+    Uinfo(message)
+    del owm, w, myWeather, city, temp
 
 @dp.message_handler()
 async def badWord(message : types.Message):
-    for word in data["BadWords"]:
+    for word in read()["BadWords"]:
         if word.lower() in (message.text.lower()).split(' '):
             await message.delete()
             await message.answer("Давай без матів)))")
             break
-
-if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
+try:
+    if __name__ == "__main__":
+        executor.start_polling(dp, skip_updates=True)
+except Exception as E:
+    print(f"[Error] {E}")
