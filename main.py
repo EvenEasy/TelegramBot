@@ -187,13 +187,13 @@ async def weather(message : types.Message):
     Uinfo(message)
     del owm, w, myWeather, city, temp
 
-@dp.message_handler()
-async def badWord(message : types.Message):
-    for word in read()["BadWords"]:
-        if word.lower() in (message.text.lower()).split(' '):
-            await message.delete()
-            await message.answer("Давай без матів)))")
-            break
+#@dp.message_handler()
+#async def badWord(message : types.Message):
+#    for word in read()["BadWords"]:
+#        if word.lower() in (message.text.lower()).split(' '):
+#            await message.delete()
+#            await message.answer("Давай без матів)))")
+#            break
 try:
     if __name__ == "__main__":
         executor.start_polling(dp, skip_updates=True)
