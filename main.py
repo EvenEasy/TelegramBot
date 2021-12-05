@@ -182,8 +182,6 @@ async def weather(message : types.Message):
         return
 
     await message.answer(f"Температура в м.{city} - {str(temp)}°")
-    if temp < 10:
-        await message.answer("Бажано одягати куртку і штани)))")
     Uinfo(message)
     del owm, w, myWeather, city, temp
 
