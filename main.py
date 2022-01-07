@@ -54,6 +54,19 @@ def get_news():
             return title
     except Exception as E:
         return f"[ ! ] помилка - {E}"
+def memes_google():
+    headers = {
+        "User-agent" : "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36 OPR/77.0.4054.298"    
+    }
+    url = "https://www.google.com/search?q=%D0%BC%D0%B5%D0%BC%D1%8B+%D0%BF%D1%80%D0%BE+%D0%BA%D0%BE%D0%BB%D0%BB%D0%B5%D0%B4%D0%B6+%D0%B8+%D1%83%D0%BD%D0%B8%D0%B2%D0%B5%D1%80%D1%8B&client=firefox-b-d&biw=899&bih=497&source=lnms&tbm=isch&sa=X&ved=2ahUKEwiAz97t9pz1AhWHmIsKHaUKBh4Q_AUoAXoECAEQAw"
+    r = requests.get(url=url, headers=headers)
+    try:
+        soup = BS(r.text, "lxml")
+        mems = soup.find_all("img", class_="rg_i Q4LuWd")
+        for meme in mems:
+            return meme["src"]
+    except Exception as E:
+        return f"[ ! ] помилка - {E}"
 
 @dp.message_handler(commands=["wiki", "wikipedia"])
 async def wiki(title = types.Message):
@@ -185,15 +198,9 @@ async def weather(message : types.Message):
     Uinfo(message)
     del owm, w, myWeather, city, temp
 
-#@dp.message_handler()
-#async def badWord(message : types.Message):
-#    for word in read()["BadWords"]:
-#        if word.lower() in (message.text.lower()).split(' '):
-#            await message.delete()
-#            await message.answer("Давай без матів)))")
-#            break
-try:
-    if __name__ == "__main__":
-        executor.start_polling(dp, skip_updates=True)
-except Exception as E:
-    print(f"[Error] {E}")
+@dp.message_handler(commands=["memes"])
+async def memes(message : types.Message):
+    await message.answer(memes_google())
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
