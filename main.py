@@ -174,6 +174,16 @@ async def Schedule(msgs : types.Message):
     await msgs.answer(answer)
     Uinfo(msgs)
     del msg, arg, answer, lst
+@dp.message_handler(commands = ["callschedule"])
+async def LssTimes(msgs : types.message):
+    answer = ""
+    bd = read()["CallSchedule"]
+    for i in bd.keys():
+        answer += f"____|{i.upper()}|____\n"
+        for t in range(len(bd[i])):
+            answer += f"{str(t + 1)} - {bd[i][str(t+1)]}\n"
+        answer += "________________\n\n"
+    await msgs.answer(answer)
 
 @dp.message_handler(commands=["news"])
 async def news(message : types.Message):
