@@ -1,9 +1,10 @@
 import logging
-from os import access
+from os import access, execlp
 import config
 import json
 import requests
 import pyowm
+import random
 import wikipedia
 import gspread
 
@@ -58,13 +59,18 @@ def memes_google():
     headers = {
         "User-agent" : "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36 OPR/77.0.4054.298"    
     }
-    url = "https://www.google.com/search?q=%D0%BC%D0%B5%D0%BC%D1%8B+%D0%BF%D1%80%D0%BE+%D0%BA%D0%BE%D0%BB%D0%BB%D0%B5%D0%B4%D0%B6+%D0%B8+%D1%83%D0%BD%D0%B8%D0%B2%D0%B5%D1%80%D1%8B&client=firefox-b-d&biw=899&bih=497&source=lnms&tbm=isch&sa=X&ved=2ahUKEwiAz97t9pz1AhWHmIsKHaUKBh4Q_AUoAXoECAEQAw"
-    r = requests.get(url=url, headers=headers)
+    try:
+        url = f"https://301-1.ru?page={random.randrange(1, 993)}"
+        r = requests.get(url=url, headers=headers)
+    except Exception as E:
+        return f"[ ! ] помилка - {E}"
     try:
         soup = BS(r.text, "lxml")
-        mems = soup.find_all("img", class_="rg_i Q4LuWd")
-        for meme in mems:
-            return meme["src"]
+        mems = soup.find_all("a", class_="new_btn")
+        d = read()
+        d["Num memes"]+= 1
+        r = random.randrange(0,len(mems))
+        return mems[r]["href"]
     except Exception as E:
         return f"[ ! ] помилка - {E}"
 
@@ -89,6 +95,7 @@ async def info(msg : types.Message):
 /temp - Температура в м.Дубно(та не тільки)
 /news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
 /wiki - пошук інформації у Wikipedia
+/memes - меми з сайту https://301-1.ru
 /search - пошук інформації в GOOGLE
 _________________________________
 /schedulemon- розклад Пар на Понеділок
@@ -211,7 +218,11 @@ async def weather(message : types.Message):
 
 @dp.message_handler(commands=["memes"])
 async def memes(message : types.Message):
-    await message.answer(memes_google())
+    try:
+        await message.answer_photo (memes_google())
+    except Exception as E:
+        #await message.answer(f"[ ! ] помилка - {E}")
+        await message.answer_photo (memes_google())
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
