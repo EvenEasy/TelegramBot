@@ -1,16 +1,19 @@
-import logging
-from os import access, execlp
-import config
-import json
-import requests
-import pyowm
-import random
-import wikipedia
-import gspread
+try:
+    import logging
+    from os import access, execlp
+    import config
+    import json
+    import requests
+    import pyowm
+    import random
+    import wikipedia
+    import gspread
 
-from googlesearch import search
-from bs4 import BeautifulSoup as BS
-from aiogram import Bot, Dispatcher, executor, types
+    from googlesearch import search
+    from bs4 import BeautifulSoup as BS
+    from aiogram import Bot, Dispatcher, executor, types
+except Exception as E:
+    print(f"[Error] {E}")
 
 try:
     logging.basicConfig(level=logging.INFO)
