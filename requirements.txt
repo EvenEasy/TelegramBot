@@ -1,5 +1,4 @@
 aiogram==2.18
-aiohttp
 aiosignal==1.2.0
 async-timeout==3.0.1
 atomicwrites==1.4.0
