@@ -1,19 +1,13 @@
-try:
-    import logging
-    from os import access, execlp
-    import config
-    import json
-    import requests
-    import pyowm
-    import random
-    import wikipedia
-    import gspread
+import logging, config,requests, pyowm,random, wikipedia, gspread
 
-    from googlesearch import search
-    from bs4 import BeautifulSoup as BS
-    from aiogram import Bot, Dispatcher, executor, types
-except Exception as E:
-    print(f"[Error] {E}")
+from urllib3 import Timeout
+from aiogram.dispatcher import FSMContext
+from basedata import BaseData
+from googlesearch import search
+from bs4 import BeautifulSoup as BS
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher.filters.state import State, StatesGroup
 
 try:
     logging.basicConfig(level=logging.INFO)
@@ -22,26 +16,27 @@ try:
     gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
     data1 = sh.sheet1
-    access_с = [1835953916, 1009661353]
+    access_с = [1009661353] # 1835953916
+    mainChatId = "@evenaesybot"#-1001544263329
 
     bot = Bot(token=config.TOKEN)
-    dp = Dispatcher(bot)
-    def read():
-        with open("data.json", "r", encoding='utf8') as file:
-            return json.load(file)
-    def write(dict1):
-        with open("data.json", "w", encoding='utf8') as file:
-            return json.dump(dict1, file, indent=4, ensure_ascii=False)
-    def Uinfo(msg : types.Message):
-        d = read()
-        n = 1
-        if str(msg.from_user.id) in d["User_Input_Info"].keys(): n = d["User_Input_Info"][str(msg.from_user.id)][0] + 1
-        d["User_Input_Info"][str(msg.from_user.id)] = [n,msg.text, msg.from_user.full_name]
-        write(d)
-        del d, n
-
+    dp = Dispatcher(bot, storage=MemoryStorage())
+    db = BaseData("basedata.db")
 except Exception as E:
     print(f"[Error] {E}")
+
+#---------------------------------------------------------------------------------------------------------------------------#
+
+class Form(StatesGroup):
+    googleSearch = State()
+    wikisearch = State()
+    DayHW = State()
+    subj = State()
+    HW = State()
+    Link = State()
+    times = State()
+    absent = State()
+    sendMsg = State()
 
 def get_news():
     headers = {
@@ -58,61 +53,57 @@ def get_news():
             return title
     except Exception as E:
         return f"[ ! ] помилка - {E}"
-def memes_google():
-    headers = {
-        "User-agent" : "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36 OPR/77.0.4054.298"    
-    }
-    try:
-        url = f"https://301-1.ru?page={random.randrange(1, 993)}"
-        r = requests.get(url=url, headers=headers)
-    except Exception as E:
-        return f"[ ! ] помилка - {E}"
-    try:
-        soup = BS(r.text, "lxml")
-        mems = soup.find_all("a", class_="new_btn")
-        d = read()
-        d["Num memes"]+= 1
-        r = random.randrange(0,len(mems))
-        return mems[r]["href"]
-    except Exception as E:
-        return f"[ ! ] помилка - {E}"
 
-@dp.message_handler(commands=["wiki", "wikipedia"])
-async def wiki(title = types.Message):
-    Uinfo(title)
-    try:
-        search = wikipedia.search(title.get_args(), results=1)
-        result = wikipedia.page(search)
-        await title.answer(f"{result.title}\n_______________\n{wikipedia.summary(search, sentences=9)}\n_______________\n{result.url}")
-    except wikipedia.exceptions.WikipediaException:
-        await title.answer("Введіть аргумент пошуку\nнаприклад : /wiki [запрос]")
-    except Exception as a:
-        await title.answer(f"[ ! ] помилка : {a}")
-        del a
-    del search, result
+#---------------------------------------------------------------------------------------------------------------------------#
 
-@dp.message_handler(commands=['help'])
+async def isChatAdmin(memberID):
+    try:
+        chat = await bot.get_chat_member(mainChatId,memberID)
+        print(chat.is_chat_admin())
+        return chat.is_chat_admin()
+    except Exception as E:
+        print(E)
+        return False
+
+def reg(args : types.Message):
+    if db.get_student_id(str(args.from_user.mention)) == []:
+        db.reg(args.from_user.id, str(args.from_user.mention))
+
+@dp.message_handler(commands=['wiki', 'wikipedia'])
+async def wiki(msg : types.Message):
+    await msg.answer("що ви шукаєте?")
+    await Form.wikisearch.set()
+
+@dp.message_handler(commands=['send'])
+async def wiki(msg : types.Message):
+    if msg.from_user.id in access_с:
+        await msg.answer("Введіть текст")
+        await Form.sendMsg.set()
+
+#----------------------------------------------------------------------#
+
+@dp.message_handler(commands=['help', 'start'])
 async def info(msg : types.Message):
-    Uinfo(msg)
-    await msg.answer("""Вот список доптупних Команд для усіх : 
+    text = """*Вот список доптупних Команд для усіх* : 
+┈───────────ᗊ───────────┈
 /temp - Температура в м.Дубно(та не тільки)
-/news - Крайні новини з сайту Коледжу https://dubnopk.com.ua/index.php/news
+/news - Крайні новини з [сайту Коледжу](https://dubnopk.com.ua/index.php/news)
 /wiki - пошук інформації у Wikipedia
-/memes - меми з сайту https://301-1.ru
 /search - пошук інформації в GOOGLE
-_________________________________
+
 /schedulemon- розклад Пар на Понеділок
 /scheduletue - розклад Пар на Вівторок
 /schedulewed - розклад Пар на Середу
 /schedulethu - розклад Пар на Четвер
 /schedulefri - розклад Пар на П'ятницю
-/callschedule - розклад дзвінків
-Інші команди доступні тільки для Старости)))
-""")
+┈───────────ᗊ───────────┈
+_Інші команди доступні тільки для Старости)))_"""
+    await msg.answer(text, parse_mode="Markdown")
+
+#---------------------------------------------------------------------------------------------------------------------------#
 
 @dp.message_handler(commands=['SetInfo'])
 async def SetInfo(args : types.Message):
-    Uinfo(args)
     if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
@@ -127,6 +118,8 @@ async def SetInfo(args : types.Message):
         del ind
         return
     data1.append_row(a)
+
+#----------------------------------------------------------------------#
 
 @dp.message_handler(commands=['GetInfo'])
 async def Getinfo(args : types.Message):
@@ -144,11 +137,11 @@ async def Getinfo(args : types.Message):
     for key, value in d.items():
         answer += f"{key} - {value}\n"
     await args.answer(answer)
-    Uinfo(args)
+
+#----------------------------------------------------------------------#
 
 @dp.message_handler(commands=['GetAllInfo'])
 async def GetAllInfo(args : types.Message):
-    Uinfo(args)
     if args.from_user.id not in access_с:
         await args.answer("У вас немає доступу до Команди")
         return
@@ -161,48 +154,55 @@ async def GetAllInfo(args : types.Message):
         await args.answer(answer)
         del answer
 
+#----------------------------------------------------------------------#
+
 @dp.message_handler(commands=['search', 's'])
 async def Google_Shearch(args : types.Message):
-    Uinfo(args)
-    if args.get_args() == "":
-        await args.answer("Введіть аргумент пошуку\nнаприклад : /search [запрос]")
-        return
-    try:
-        for url in search(args.get_args(), lang='uk', num_results=5):
-            await args.answer(url)
-    except Exception as E:
-        await args.answer(f"[ ! ] помилка - {E}")
+    reg(args)
+    await args.answer("що ви шукаєте?")
+    await Form.googleSearch.set()
+
+#----------------------------------------------------------------------#
     
 @dp.message_handler(commands=["scheduleMon", "scheduleTue", "scheduleWed", "scheduleThu", "scheduleFri"])
 async def Schedule(msgs : types.Message):
-    msg = msgs.text.split('@')[0]
-    arg = msg[-3] + msg[-2] + msg[-1]
-    answer = f"______|{arg.upper()}|______\n"
-    lst = list(read()["Days"][arg].keys())
-    for i in range(len(lst)):
-        answer += f"{i + 1} - {lst[i]}\n"
-    answer += "_________________"
-    await msgs.answer(answer)
-    Uinfo(msgs)
-    del msg, arg, answer, lst
-@dp.message_handler(commands = ["callschedule"])
-async def LssTimes(msgs : types.message):
-    answer = ""
-    bd = read()["CallSchedule"]
-    for i in bd.keys():
-        answer += f"____|{i.upper()}|____\n"
-        for t in range(len(bd[i])):
-            answer += f"{str(t + 1)} - {bd[i][str(t+1)]}\n"
-        answer += "________________\n\n"
-    await msgs.answer(answer)
+    reg(msgs)
+    arg = msgs.text[-3::] if '@' not in msgs.text else msgs.text.split('@')[0][-3::]
+    day = db.days[arg.lower()]
+    answer = f"╰───╮⌬ *{day}* ╭───╯\n"
+    for sybject, HW, times, url in db.sql(f"SELECT sybject, HW, times, Link FROM Schedule WHERE day = '{day}'"):
+        Hw = f'\n    _ДЗ : {HW}_' if HW != None and HW != '' and HW != ' ' else ''
+        answer += f"•{times if times != None else ''} - [{sybject}]({url}){Hw}\n" if sybject != None and sybject != '' and sybject != ' ' else '•\n'
+    answer += "┈────────ᗊ────────┈"
+    await msgs.answer(answer, parse_mode="Markdown")
+
+#absent
+@dp.message_handler(commands=["absent"])
+async def Schedule(msgs : types.Message):
+    reg(msgs)
+    if msgs.from_user.id in access_с:
+        await msgs.answer("Введіть відсутніх")
+        await Form.absent.set()
+
+@dp.message_handler(commands=["hw"])
+async def news(message : types.Message):
+    reg(message)
+    if await isChatAdmin(message.from_user.id):
+        await message.answer("Виберіть день", reply_markup=db.daysBttn)
+        db.sql(f"INSERT INTO SetHW(user) VALUES ({message.from_user.id})")
+        await Form.DayHW.set()
+#----------------------------------------------------------------------#
 
 @dp.message_handler(commands=["news"])
 async def news(message : types.Message):
-    await message.answer(f"НОВИНИ  :\n{get_news()}\n - https://dubnopk.com.ua/index.php/news")
-    Uinfo(message)
+    reg(message)
+    await message.answer(f"*НОВИНИ*  :\n{get_news()}\n\n_новини з_ [ДПФК РДГУ](https://dubnopk.com.ua/index.php/news)", parse_mode="Markdown")
+
+#----------------------------------------------------------------------#
 
 @dp.message_handler(commands=["temp"])
 async def weather(message : types.Message):
+    reg(message)
     city = "Дубно"
     if len(message.get_args()) >= 2:
         city = message.get_args()
@@ -215,17 +215,114 @@ async def weather(message : types.Message):
         await message.answer(f"[ ! ] помилка - {E}")
         return
 
-    await message.answer(f"Температура в м.{city} - {str(temp)}°")
-    Uinfo(message)
-    del owm, w, myWeather, city, temp
+    await message.answer(f"Температура в *м.{city}* - {str(temp)}°", parse_mode="Markdown")
 
-@dp.message_handler(commands=["memes"])
-async def memes(message : types.Message):
+#---------------------------------------------------------------------------------------------------------------------------#
+
+@dp.message_handler(state=Form.googleSearch)
+async def googleS(args : types.Message, state : FSMContext):
+    await state.finish()
     try:
-        await message.answer_photo (memes_google())
+        answer = "┈───────────ᗊ───────────┈\n"
+        msg = await args.answer("Іде пошук...\n_це може зайняти деякий час_", parse_mode='Markdown')
+        for url in search(args.text, lang='uk', num_results=15):
+            try:
+                reqs = requests.get(url)
+                soup = BS(reqs.text, 'lxml')
+                head = soup.find("head")
+                title = head.find('title').get_text()
+                answer += f"•[{title}]({url})\n"
+            except:
+                pass
+        answer += "┈───────────ᗊ───────────┈"
+        await msg.edit_text(answer, parse_mode="Markdown")
     except Exception as E:
-        #await message.answer(f"[ ! ] помилка - {E}")
-        await message.answer_photo (memes_google())
+        await args.answer(f"[ ! ] помилка - {E}")
+
+#----------------------------------------------------------------------#
+
+@dp.message_handler(state=Form.wikisearch)
+async def wikipedias(title : types.Message, state : FSMContext):
+    await state.finish()
+    try:
+        msg = await title.answer("Іде пошук...\n_це може зайняти деякий час_", parse_mode='Markdown')
+        search = wikipedia.search(title.text, results=1)
+        result = wikipedia.page(search)
+        await msg.edit_text(f"*{result.title}*\n┈──────────────ᗊ──────────────┈\n{wikipedia.summary(search, sentences=9)}\n┈──────────────ᗊ──────────────┈\n[Wikipedia]({result.url})", parse_mode="Markdown")
+    except Exception as a:
+        await title.answer(f"[ ! ] помилка : {a}")
+
+
+@dp.message_handler(state=Form.DayHW)
+async def DaysHW(title : types.Message, state : FSMContext):
+    if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
+        await state.finish()
+        db.sql(f"UPDATE SetHW SET day = '{title.text}' WHERE user = '{title.from_user.id}'")
+        bttn = db.getSubj(title.text)
+        await title.answer("Виберіть предмет", reply_markup=bttn)
+        await Form.subj.set()
+
+@dp.message_handler(state=Form.subj)
+async def DaysHW(title : types.Message, state : FSMContext):
+    if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
+        await state.finish()
+        db.sql(f"UPDATE SetHW SET subject = '{title.text}'")
+        await title.answer("Введіть ДЗ\nякщо ДЗ немає або ви не знаєте\nпишіть *немає*", reply_markup=db.removeBttns, parse_mode='Markdown')
+        await Form.HW.set()
+
+@dp.message_handler(state=Form.HW)
+async def DaysHW(title : types.Message, state : FSMContext):
+    if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
+        await state.finish()
+        if title.text.lower() != 'немає':
+            day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
+            db.sql(f"UPDATE Schedule SET HW = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
+        await title.answer("Введіть посилання\nякщо посилання немає або ви не знаєте\nпишіть *немає*", parse_mode='Markdown')
+        await Form.Link.set()
+
+@dp.message_handler(state=Form.Link)
+async def DaysHW(title : types.Message, state : FSMContext):
+    if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
+        await state.finish()
+        if title.text.lower() != 'немає':
+            day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
+            db.sql(f"UPDATE Schedule SET Link = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
+        await title.answer("Введіть час зустрічі\n_наприклад:_ *8:30*", parse_mode='Markdown')
+        await Form.times.set()
+
+@dp.message_handler(state=Form.times)
+async def DaysHW(title : types.Message, state : FSMContext):
+    if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
+        await state.finish()
+        if title.text.lower() != 'немає':
+            day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
+            db.sql(f"UPDATE Schedule SET times = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
+        db.sql(f"DELETE FROM SetHW WHERE user = '{title.from_user.id}'")
+        await title.answer("Все готово\nдякую)")
+        await Form.times.set()
+
+
+@dp.message_handler(state=Form.absent)
+async def absept(members : types.Message, state : FSMContext):
+    if members.from_user.id == 1009661353:
+        print(members.from_user.id, type(members.from_user.id))
+        await state.finish()
+        for member in members.text.split(' '):
+            try:
+                await bot.send_message(db.get_student_id(member)[0][0], "Напиши старості причину своєї відсутності на парі !\nнегайно !!!")
+            except Exception as E:
+                print(E)
+
+@dp.message_handler(state=Form.sendMsg)
+async def wikipedias(msg : types.Message, state : FSMContext):
+    if msg.from_user.id in access_с:
+        await state.finish()
+        try:
+            await bot.send_message(mainChatId, msg.text, parse_mode="Markdown")
+        except Exception as a:
+            await msg.answer(f"[ ! ] помилка : {a}")
+
+#---------------------------------------------------------------------------------------------------------------------------#
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
