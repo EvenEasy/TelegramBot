@@ -6,6 +6,9 @@ class BaseData:
     daysBttn = ReplyKeyboardMarkup(resize_keyboard=True)
     daysBttn.add(KeyboardButton("Понеділок"), KeyboardButton("Вівторок"), KeyboardButton("Середа"))
     daysBttn.add(KeyboardButton("Четвер"), KeyboardButton("П`ятниця"))
+
+    HWbttn = ReplyKeyboardMarkup(resize_keyboard=True)
+    HWbttn.add(KeyboardButton("немає"), KeyboardButton("пропустити"))
     
     removeBttns = ReplyKeyboardRemove()
 

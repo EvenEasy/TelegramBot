@@ -1,6 +1,5 @@
 import logging, config,requests, pyowm,random, wikipedia, gspread
 
-from urllib3 import Timeout
 from aiogram.dispatcher import FSMContext
 from basedata import BaseData
 from googlesearch import search
@@ -59,7 +58,6 @@ def get_news():
 async def isChatAdmin(memberID):
     try:
         chat = await bot.get_chat_member(mainChatId,memberID)
-        print(chat.is_chat_admin())
         return chat.is_chat_admin()
     except Exception as E:
         print(E)
@@ -267,14 +265,19 @@ async def DaysHW(title : types.Message, state : FSMContext):
     if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
         await state.finish()
         db.sql(f"UPDATE SetHW SET subject = '{title.text}'")
-        await title.answer("Введіть ДЗ\nякщо ДЗ немає або ви не знаєте\nпишіть *немає*", reply_markup=db.removeBttns, parse_mode='Markdown')
+        await title.answer("Введіть ДЗ\nякщо ДЗ немає або ви не знаєте\nпишіть *немає*", reply_markup=db.HWbttn, parse_mode='Markdown')
         await Form.HW.set()
 
 @dp.message_handler(state=Form.HW)
 async def DaysHW(title : types.Message, state : FSMContext):
     if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
         await state.finish()
-        if title.text.lower() != 'немає':
+        if title.text.lower() == 'пропустити':
+            pass
+        elif title.text.lower() == 'немає':
+            day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
+            db.sql(f"UPDATE Schedule SET HW = '' WHERE day = '{day}' and sybject = '{subject}'")
+        else:
             day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
             db.sql(f"UPDATE Schedule SET HW = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
         await title.answer("Введіть посилання\nякщо посилання немає або ви не знаєте\nпишіть *немає*", parse_mode='Markdown')
@@ -284,7 +287,12 @@ async def DaysHW(title : types.Message, state : FSMContext):
 async def DaysHW(title : types.Message, state : FSMContext):
     if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
         await state.finish()
-        if title.text.lower() != 'немає':
+        if title.text.lower() == 'пропустити':
+            pass
+        elif title.text.lower() == 'немає':
+            day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
+            db.sql(f"UPDATE Schedule SET Link = '' WHERE day = '{day}' and sybject = '{subject}'")
+        else:
             day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
             db.sql(f"UPDATE Schedule SET Link = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
         await title.answer("Введіть час зустрічі\n_наприклад:_ *8:30*", parse_mode='Markdown')
@@ -294,11 +302,13 @@ async def DaysHW(title : types.Message, state : FSMContext):
 async def DaysHW(title : types.Message, state : FSMContext):
     if db.sql(f"SELECT user FROM SetHW WHERE user = '{title.from_user.id}'") != [] and await isChatAdmin(title.from_user.id):
         await state.finish()
-        if title.text.lower() != 'немає':
+        if title.text.lower() == 'пропустити' or title.text.lower() == 'немає':
+            pass
+        else:
             day, subject = db.sql(f"SELECT day, subject FROM SetHW WHERE user = '{title.from_user.id}'")[0]
             db.sql(f"UPDATE Schedule SET times = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
         db.sql(f"DELETE FROM SetHW WHERE user = '{title.from_user.id}'")
-        await title.answer("Все готово\nдякую)")
+        await title.answer("Все готово\nдякую)", reply_markup=db.removeBttns)
 
 
 @dp.message_handler(state=Form.absent)
