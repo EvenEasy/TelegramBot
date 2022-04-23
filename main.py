@@ -16,8 +16,8 @@ try:
     gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key("1ddyrobtVFD0rk8WMOEMJ_nVk0rLSNN3fZo1twlLL-kM")
     data1 = sh.sheet1
-    access_с = [1009661353] # 1835953916
-    mainChatId = "@evenaesybot"#-1001544263329
+    access_с = [1009661353, 1835953916]
+    mainChatId = -1001544263329
 
     bot = Bot(token=config.TOKEN)
     dp = Dispatcher(bot, storage=MemoryStorage())
