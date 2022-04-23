@@ -299,7 +299,6 @@ async def DaysHW(title : types.Message, state : FSMContext):
             db.sql(f"UPDATE Schedule SET times = '{title.text}' WHERE day = '{day}' and sybject = '{subject}'")
         db.sql(f"DELETE FROM SetHW WHERE user = '{title.from_user.id}'")
         await title.answer("Все готово\nдякую)")
-        await Form.times.set()
 
 
 @dp.message_handler(state=Form.absent)
